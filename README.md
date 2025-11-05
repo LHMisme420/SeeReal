@@ -1247,3 +1247,1055 @@ const styles = StyleSheet.create({
 └── docs/
     ├── INTEGRATION.md
     └── DEPLOYMENT.md
+reality-check-seereal/
+├── mobile/                     # React Native App (MAIN FOCUS)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Detection/     # SeeReal components
+│   │   │   ├── Drill/         # Training exercises
+│   │   │   └── UI/           # Reusable components
+│   │   ├── screens/           # All app screens
+│   │   ├── utils/             # Storage, helpers
+│   │   ├── data/              # Training content
+│   │   └── styles/            # Design system
+│   ├── assets/               # Images, icons, videos
+│   ├── app.json              # Expo config
+│   ├── App.js               # Main app entry
+│   └── package.json
+├── backend/                  # Optional cloud backend
+│   ├── models/              # ML model serving
+│   ├── api/                 # REST API
+│   └── database/            # User progress sync
+├── docs/                    # Documentation
+│   ├── LAUNCH_CHECKLIST.md
+│   ├── DEPLOYMENT.md
+│   └── MARKETING.md
+└── scripts/                 # Build & deployment scripts{
+  "name": "reality-check-seereal",
+  "version": "1.0.0",
+  "description": "AI Safety: Deepfake detection + critical thinking training",
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "build:android": "expo build:android",
+    "build:ios": "expo build:ios",
+    "preview": "expo publish",
+    "test": "jest"
+  },
+  "dependencies": {
+    "expo": "~49.0.0",
+    "expo-status-bar": "~1.6.0",
+    "expo-camera": "~13.4.0",
+    "expo-image-picker": "~14.3.0",
+    "expo-av": "~13.4.0",
+    "expo-sharing": "~11.3.0",
+    "expo-notifications": "~0.20.1",
+    "react": "18.2.0",
+    "react-native": "0.72.0",
+    "@react-navigation/native": "^6.1.0",
+    "@react-navigation/stack": "^6.3.0",
+    "@react-native-async-storage/async-storage": "1.18.0",
+    "lottie-react-native": "5.1.0",
+    "react-native-svg": "13.9.0",
+    "axios": "^1.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "jest": "^29.2.1",
+    "jest-expo": "~49.0.0"
+  }
+}import React, { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
+import { View, Text } from 'react-native';
+
+// Import all screens
+import Onboarding from './src/screens/Onboarding';
+import Dashboard from './src/screens/Dashboard';
+import DrillScreen from './src/screens/DrillScreen';
+import SeeRealScreen from './src/screens/SeeRealScreen';
+import ProgressScreen from './src/screens/ProgressScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+
+// Import storage for user progress
+import { Storage } from './src/utils/storage';
+
+const Stack = createStackNavigator();
+
+// Loading component
+function LoadingScreen() {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#667eea' }}>
+      <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', marginBottom: 20 }}>🛡️ Reality Check</Text>
+      <Text style={{ color: 'white', fontSize: 16 }}>Loading your AI safety toolkit...</Text>
+    </View>
+  );
+}
+
+export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLaunch, setIsFirstLaunch] = useState(true);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Check if user has completed onboarding
+      const hasCompletedOnboarding = await Storage.getSetting('hasCompletedOnboarding');
+      setIsFirstLaunch(!hasCompletedOnboarding);
+    } catch (error) {
+      console.error('Error initializing app:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <NavigationContainer>
+      <StatusBar style="auto" />
+      <Stack.Navigator initialRouteName={isFirstLaunch ? "Onboarding" : "Dashboard"}>
+        <Stack.Screen 
+          name="Onboarding" 
+          component={Onboarding}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="Dashboard" 
+          component={Dashboard}
+          options={{ 
+            title: '🛡️ AI Safety Suite',
+            headerStyle: { backgroundColor: '#667eea' },
+            headerTintColor: 'white'
+          }}
+        />
+        <Stack.Screen 
+          name="DrillScreen" 
+          component={DrillScreen}
+          options={{ title: '🎯 Training Drills' }}
+        />
+        <Stack.Screen 
+          name="SeeRealScreen" 
+          component={SeeRealScreen}
+          options={{ title: '🔍 SeeReal Detector' }}
+        />
+        <Stack.Screen 
+          name="ProgressScreen" 
+          component={ProgressScreen}
+          options={{ title: '📊 Your Progress' }}
+        />
+        <Stack.Screen 
+          name="SettingsScreen" 
+          component={SettingsScreen}
+          options={{ title: '⚙️ Settings' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Storage } from '../utils/storage';
+
+const { width } = Dimensions.get('window');
+
+const onboardingSlides = [
+  {
+    id: 1,
+    emoji: '🛡️',
+    title: 'Welcome to Reality Check',
+    description: 'Build your cognitive immune system against AI misinformation'
+  },
+  {
+    id: 2,
+    emoji: '🔍',
+    title: 'Detect Deepfakes',
+    description: 'Use SeeReal technology to analyze images and videos for AI manipulation'
+  },
+  {
+    id: 3,
+    emoji: '🎯',
+    title: 'Daily Training',
+    description: 'Sharpen your critical thinking skills with daily detection drills'
+  },
+  {
+    id: 4,
+    emoji: '📊',
+    title: 'Track Progress',
+    description: 'Monitor your improvement and earn badges as you learn'
+  }
+];
+
+export default function Onboarding({ navigation }) {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const handleNext = async () => {
+    if (currentSlide < onboardingSlides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    } else {
+      // Complete onboarding
+      await Storage.saveSetting('hasCompletedOnboarding', true);
+      navigation.replace('Dashboard');
+    }
+  };
+
+  const handleSkip = async () => {
+    await Storage.saveSetting('hasCompletedOnboarding', true);
+    navigation.replace('Dashboard');
+  };
+
+  return (
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.gradient}
+      >
+        {/* Progress Dots */}
+        <View style={styles.dotsContainer}>
+          {onboardingSlides.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                currentSlide === index && styles.activeDot
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          <Text style={styles.emoji}>{onboardingSlides[currentSlide].emoji}</Text>
+          <Text style={styles.title}>{onboardingSlides[currentSlide].title}</Text>
+          <Text style={styles.description}>{onboardingSlides[currentSlide].description}</Text>
+        </View>
+
+        {/* Buttons */}
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+            <Text style={styles.nextText}>
+              {currentSlide === onboardingSlides.length - 1 ? 'Get Started' : 'Next'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  gradient: {
+    flex: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 30,
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    marginTop: 40,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: 'white',
+    width: 20,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 80,
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  description: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  skipButton: {
+    padding: 15,
+  },
+  skipText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+  },
+  nextButton: {
+    backgroundColor: 'white',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+  },
+  nextText: {
+    color: '#667eea',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+}import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import DeepfakeDrill from '../components/Drill/DeepfakeDrill';
+import FallacyDrill from '../components/Drill/FallacyDrill';
+import SourceCheckDrill from '../components/Drill/SourceCheckDrill';
+import { deepfakeDrills, fallacyDrills, sourceCheckDrills } from '../data/drills';
+import { Storage } from '../utils/storage';
+
+const DRILL_TYPES = {
+  DEEPFAKE: 'deepfake',
+  FALLACY: 'fallacy',
+  SOURCE_CHECK: 'source_check'
+};
+
+export default function DrillScreen({ navigation }) {
+  const [currentDrillType, setCurrentDrillType] = useState(DRILL_TYPES.DEEPFAKE);
+  const [currentDrillIndex, setCurrentDrillIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [totalAttempts, setTotalAttempts] = useState(0);
+  const [drillHistory, setDrillHistory] = useState([]);
+  const [isDailyComplete, setIsDailyComplete] = useState(false);
+
+  const getCurrentDrills = () => {
+    switch (currentDrillType) {
+      case DRILL_TYPES.DEEPFAKE:
+        return deepfakeDrills;
+      case DRILL_TYPES.FALLACY:
+        return fallacyDrills;
+      case DRILL_TYPES.SOURCE_CHECK:
+        return sourceCheckDrills;
+      default:
+        return deepfakeDrills;
+    }
+  };
+
+  const currentDrills = getCurrentDrills();
+  const currentDrill = currentDrills[currentDrillIndex];
+
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const loadProgress = async () => {
+    const progress = await Storage.loadProgress();
+    if (progress) {
+      setScore(progress.score || 0);
+      setTotalAttempts(progress.totalAttempts || 0);
+      setDrillHistory(progress.drillHistory || []);
+      setIsDailyComplete(progress.dailyComplete || false);
+    }
+  };
+
+  const handleDrillComplete = async (isCorrect) => {
+    const newScore = isCorrect ? score + 10 : score;
+    const newTotalAttempts = totalAttempts + 1;
+    const newHistory = [...drillHistory, {
+      type: currentDrillType,
+      drillId: currentDrill.id,
+      isCorrect,
+      timestamp: new Date().toISOString()
+    }];
+
+    setScore(newScore);
+    setTotalAttempts(newTotalAttempts);
+    setDrillHistory(newHistory);
+
+    // Save progress
+    await Storage.saveProgress({
+      score: newScore,
+      totalAttempts: newTotalAttempts,
+      drillHistory: newHistory,
+      lastDrillDate: new Date().toISOString()
+    });
+
+    // Check if should advance to next drill
+    setTimeout(() => {
+      if (currentDrillIndex < currentDrills.length - 1) {
+        setCurrentDrillIndex(currentDrillIndex + 1);
+      } else {
+        // Completed all drills of this type
+        handleSessionComplete();
+      }
+    }, 2000);
+  };
+
+  const handleSessionComplete = async () => {
+    setIsDailyComplete(true);
+    await Storage.saveSetting('dailyComplete', true);
+    
+    // Check for badge unlocks
+    await checkBadgeUnlocks();
+  };
+
+  const checkBadgeUnlocks = async () => {
+    const badges = await Storage.getBadges();
+    const newBadges = [];
+
+    // Check for streak badge
+    const streak = await Storage.getStreak();
+    if (streak >= 7 && !badges.includes('weekly_warrior')) {
+      newBadges.push('weekly_warrior');
+    }
+
+    // Check for accuracy badge
+    const accuracy = totalAttempts > 0 ? (score / 10) / totalAttempts : 0;
+    if (accuracy >= 0.8 && totalAttempts >= 10 && !badges.includes('sharp_eye')) {
+      newBadges.push('sharp_eye');
+    }
+
+    if (newBadges.length > 0) {
+      await Storage.saveBadges([...badges, ...newBadges]);
+    }
+  };
+
+  const resetDailyDrills = async () => {
+    setCurrentDrillIndex(0);
+    setIsDailyComplete(false);
+    await Storage.saveSetting('dailyComplete', false);
+  };
+
+  const renderDrillComponent = () => {
+    switch (currentDrillType) {
+      case DRILL_TYPES.DEEPFAKE:
+        return (
+          <DeepfakeDrill 
+            drill={currentDrill}
+            onComplete={handleDrillComplete}
+          />
+        );
+      case DRILL_TYPES.FALLACY:
+        return (
+          <FallacyDrill
+            drill={currentDrill}
+            onComplete={handleDrillComplete}
+          />
+        );
+      case DRILL_TYPES.SOURCE_CHECK:
+        return (
+          <SourceCheckDrill
+            drill={currentDrill}
+            onComplete={handleDrillComplete}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (isDailyComplete) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.completionContainer}>
+          <Text style={styles.completionEmoji}>🎉</Text>
+          <Text style={styles.completionTitle}>Daily Training Complete!</Text>
+          <Text style={styles.completionScore}>
+            Today's Score: {score} points
+          </Text>
+          <Text style={styles.completionAccuracy}>
+            Accuracy: {totalAttempts > 0 ? Math.round((score / 10) / totalAttempts * 100) : 0}%
+          </Text>
+          
+          <TouchableOpacity style={styles.continueButton} onPress={resetDailyDrills}>
+            <Text style={styles.continueButtonText}>Practice More</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.dashboardButton} onPress={() => navigation.navigate('Dashboard')}>
+            <Text style={styles.dashboardButtonText}>Back to Dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      {/* Drill Type Selector */}
+      <View style={styles.selectorContainer}>
+        <Text style={styles.selectorTitle}>Training Type:</Text>
+        <View style={styles.selectorButtons}>
+          <TouchableOpacity 
+            style={[
+              styles.selectorButton,
+              currentDrillType === DRILL_TYPES.DEEPFAKE && styles.selectorButtonActive
+            ]}
+            onPress={() => setCurrentDrillType(DRILL_TYPES.DEEPFAKE)}
+          >
+            <Text style={[
+              styles.selectorButtonText,
+              currentDrillType === DRILL_TYPES.DEEPFAKE && styles.selectorButtonTextActive
+            ]}>
+              🔍 Deepfake
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.selectorButton,
+              currentDrillType === DRILL_TYPES.FALLACY && styles.selectorButtonActive
+            ]}
+            onPress={() => setCurrentDrillType(DRILL_TYPES.FALLACY)}
+          >
+            <Text style={[
+              styles.selectorButtonText,
+              currentDrillType === DRILL_TYPES.FALLACY && styles.selectorButtonTextActive
+            ]}>
+              🧠 Fallacies
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.selectorButton,
+              currentDrillType === DRILL_TYPES.SOURCE_CHECK && styles.selectorButtonActive
+            ]}
+            onPress={() => setCurrentDrillType(DRILL_TYPES.SOURCE_CHECK)}
+          >
+            <Text style={[
+              styles.selectorButtonText,
+              currentDrillType === DRILL_TYPES.SOURCE_CHECK && styles.selectorButtonTextActive
+            ]}>
+              📰 Sources
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Progress Bar */}
+      <View style={styles.progressContainer}>
+        <Text style={styles.progressText}>
+          Drill {currentDrillIndex + 1} of {currentDrills.length}
+        </Text>
+        <View style={styles.progressBar}>
+          <View 
+            style={[
+              styles.progressFill,
+              { width: `${((currentDrillIndex + 1) / currentDrills.length) * 100}%` }
+            ]} 
+          />
+        </View>
+      </View>
+
+      {/* Current Drill */}
+      {renderDrillComponent()}
+
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.stat}>
+          <Text style={styles.statNumber}>{score}</Text>
+          <Text style={styles.statLabel}>Points</Text>
+        </View>
+        <View style={styles.stat}>
+          <Text style={styles.statNumber}>{totalAttempts}</Text>
+          <Text style={styles.statLabel}>Drills</Text>
+        </View>
+        <View style={styles.stat}>
+          <Text style={styles.statNumber}>
+            {totalAttempts > 0 ? Math.round((score / 10) / totalAttempts * 100) : 0}%
+          </Text>
+          <Text style={styles.statLabel}>Accuracy</Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  selectorContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    marginBottom: 10,
+  },
+  selectorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  selectorButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  selectorButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  selectorButtonActive: {
+    backgroundColor: '#667eea',
+  },
+  selectorButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  selectorButtonTextActive: {
+    color: 'white',
+  },
+  progressContainer: {
+    backgroundColor: 'white',
+    padding: 15,
+    marginBottom: 10,
+  },
+  progressText: {
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  progressBar: {
+    height: 6,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#4CAF50',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    padding: 20,
+    marginTop: 10,
+  },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+  },
+  completionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'white',
+  },
+  completionEmoji: {
+    fontSize: 60,
+    marginBottom: 20,
+  },
+  completionTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  completionScore: {
+    fontSize: 18,
+    color: '#667eea',
+    marginBottom: 5,
+  },
+  completionAccuracy: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+  },
+  continueButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    marginBottom: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  continueButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dashboardButton: {
+    padding: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  dashboardButtonText: {
+    color: '#667eea',
+    fontSize: 16,
+  },
+});import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEYS = {
+  USER_PROGRESS: '@reality_check_progress',
+  USER_SETTINGS: '@reality_check_settings',
+  BADGES: '@reality_check_badges',
+  STREAK: '@reality_check_streak',
+  LAST_DRILL_DATE: '@reality_check_last_drill_date'
+};
+
+export const Storage = {
+  // Progress Management
+  async saveProgress(progress) {
+    try {
+      const existing = await this.loadProgress();
+      const updated = { ...existing, ...progress, updatedAt: new Date().toISOString() };
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_PROGRESS, JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      return null;
+    }
+  },
+
+  async loadProgress() {
+    try {
+      const progress = await AsyncStorage.getItem(STORAGE_KEYS.USER_PROGRESS);
+      return progress ? JSON.parse(progress) : {
+        score: 0,
+        totalAttempts: 0,
+        drillHistory: [],
+        badges: [],
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      return null;
+    }
+  },
+
+  // Settings Management
+  async saveSetting(key, value) {
+    try {
+      const settings = await this.getSettings();
+      settings[key] = value;
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(settings));
+      return settings;
+    } catch (error) {
+      console.error('Error saving setting:', error);
+      return null;
+    }
+  },
+
+  async getSettings() {
+    try {
+      const settings = await AsyncStorage.getItem(STORAGE_KEYS.USER_SETTINGS);
+      return settings ? JSON.parse(settings) : {};
+    } catch (error) {
+      console.error('Error loading settings:', error);
+      return {};
+    }
+  },
+
+  async getSetting(key, defaultValue = null) {
+    const settings = await this.getSettings();
+    return settings[key] !== undefined ? settings[key] : defaultValue;
+  },
+
+  // Streak Management
+  async updateStreak() {
+    try {
+      const today = new Date().toDateString();
+      const lastDrillDate = await AsyncStorage.getItem(STORAGE_KEYS.LAST_DRILL_DATE);
+      
+      let currentStreak = parseInt(await AsyncStorage.getItem(STORAGE_KEYS.STREAK) || '0');
+      
+      if (lastDrillDate !== today) {
+        // Check if consecutive day
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        if (lastDrillDate === yesterday.toDateString()) {
+          currentStreak += 1;
+        } else {
+          currentStreak = 1; // Reset streak if not consecutive
+        }
+        
+        await AsyncStorage.setItem(STORAGE_KEYS.STREAK, currentStreak.toString());
+        await AsyncStorage.setItem(STORAGE_KEYS.LAST_DRILL_DATE, today);
+      }
+      
+      return currentStreak;
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      return 0;
+    }
+  },
+
+  async getStreak() {
+    try {
+      return parseInt(await AsyncStorage.getItem(STORAGE_KEYS.STREAK) || '0');
+    } catch (error) {
+      console.error('Error getting streak:', error);
+      return 0;
+    }
+  },
+
+  // Badge Management
+  async saveBadges(badges) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.BADGES, JSON.stringify(badges));
+      return badges;
+    } catch (error) {
+      console.error('Error saving badges:', error);
+      return [];
+    }
+  },
+
+  async getBadges() {
+    try {
+      const badges = await AsyncStorage.getItem(STORAGE_KEYS.BADGES);
+      return badges ? JSON.parse(badges) : [];
+    } catch (error) {
+      console.error('Error loading badges:', error);
+      return [];
+    }
+  },
+
+  // Data Export (for user data download)
+  async exportData() {
+    try {
+      const progress = await this.loadProgress();
+      const settings = await this.getSettings();
+      const badges = await this.getBadges();
+      const streak = await this.getStreak();
+      
+      return {
+        progress,
+        settings,
+        badges,
+        streak,
+        exportDate: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error exporting data:', error);
+      return null;
+    }
+  },
+
+  // Reset all data
+  async resetAllData() {
+    try {
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.USER_PROGRESS,
+        STORAGE_KEYS.USER_SETTINGS,
+        STORAGE_KEYS.BADGES,
+        STORAGE_KEYS.STREAK,
+        STORAGE_KEYS.LAST_DRILL_DATE
+      ]);
+      return true;
+    } catch (error) {
+      console.error('Error resetting data:', error);
+      return false;
+    }
+  }
+};// Deepfake Detection Drills
+export const deepfakeDrills = [
+  {
+    id: 1,
+    type: 'deepfake',
+    description: 'Political leader giving an emergency announcement about new regulations',
+    correctAnswer: 'ai',
+    feedback: 'This was AI-generated! Notice the unnatural mouth movements and inconsistent lighting on the face.',
+    tellTaleSigns: 'Lip sync slightly off, robotic voice cadence, too-perfect facial symmetry',
+    difficulty: 'beginner',
+    points: 10,
+    category: 'political'
+  },
+  {
+    id: 2,
+    type: 'deepfake',
+    description: 'Celebrity endorsement for a questionable investment opportunity',
+    correctAnswer: 'ai',
+    feedback: 'AI-generated! Celebrities rarely make financial endorsements in this format.',
+    tellTaleSigns: 'Unnatural blinking pattern, stock background, generic emotional expressions',
+    difficulty: 'beginner',
+    points: 10,
+    category: 'financial'
+  },
+  {
+    id: 3,
+    type: 'deepfake',
+    description: 'News report about a scientific breakthrough with expert interviews',
+    correctAnswer: 'real',
+    feedback: 'This was authentic footage from a verified news network.',
+    tellTaleSigns: 'Natural camera movements, authentic background noise, verified channel branding',
+    difficulty: 'beginner',
+    points: 10,
+    category: 'news'
+  },
+  {
+    id: 4,
+    type: 'deepfake',
+    description: 'Tech CEO demonstrating a revolutionary new product',
+    correctAnswer: 'ai',
+    feedback: 'AI-generated! The hand movements don\'t perfectly match the product interaction.',
+    tellTaleSigns: 'Hand-object occlusion issues, lighting inconsistencies, unnatural product demos',
+    difficulty: 'intermediate',
+    points: 15,
+    category: 'tech'
+  },
+  {
+    id: 5,
+    type: 'deepfake',
+    description: 'Medical professional explaining health misinformation',
+    correctAnswer: 'ai',
+    feedback: 'AI-generated! Medical professionals rarely make claims without proper credentials shown.',
+    tellTaleSigns: 'No institutional branding, overly dramatic claims, missing credentials',
+    difficulty: 'intermediate',
+    points: 15,
+    category: 'medical'
+  }
+];
+
+// Logical Fallacy Drills
+export const fallacyDrills = [
+  {
+    id: 1,
+    type: 'fallacy',
+    text: 'Either we ban all AI development immediately, or we face complete human extinction within years. There are no other options.',
+    correctFallacy: 'false-dilemma',
+    options: ['false-dilemma', 'slippery-slope', 'appeal-to-fear', 'straw-man'],
+    feedback: 'This is a False Dilemma fallacy - presenting only two extreme options when many moderate possibilities exist.',
+    explanation: 'False dilemmas ignore nuance and middle ground, forcing artificial binary choices.',
+    difficulty: 'beginner',
+    points: 10,
+    category: 'rhetorical'
+  },
+  {
+    id: 2,
+    type: 'fallacy',
+    text: 'My favorite tech influencer says this AI tool is completely safe, so it must be true - they have millions of followers!',
+    correctFallacy: 'appeal-to-authority',
+    options: ['appeal-to-authority', 'bandwagon', 'anecdotal', 'ad-populum'],
+    feedback: 'This is an Appeal to Authority fallacy - popularity doesn\'t equal expertise or truth.',
+    explanation: 'True safety requires evidence, not just influential opinions.',
+    difficulty: 'beginner',
+    points: 10,
+    category: 'authority'
+  },
+  {
+    id: 3,
+    type: 'fallacy',
+    text: 'We should ignore climate change concerns because the same people who worry about climate change also support AI regulation.',
+    correctFallacy: 'guilt-by-association',
+    options: ['guilt-by-association', 'red-herring', 'whataboutism', 'straw-man'],
+    feedback: 'This is Guilt by Association - dismissing an issue based on unrelated positions of its supporters.',
+    explanation: 'Each issue should be evaluated on its own merits, not by who supports it.',
+    difficulty: 'intermediate',
+    points: 15,
+    category: 'association'
+  }
+];
+
+// Source Verification Drills
+export const sourceCheckDrills = [
+  {
+    id: 1,
+    type: 'source_check',
+    scenario: 'You see a post claiming "New AI can read your thoughts with 99% accuracy" from "AI Research Daily"',
+    sources: [
+      { name: 'Nature Journal', reliability: 'high', hasCoverage: false },
+      { name: 'MIT Technology Review', reliability: 'high', hasCoverage: false },
+      { name: 'AI Research Daily', reliability: 'low', hasCoverage: true },
+      { name: 'Science Magazine', reliability: 'high', hasCoverage: false }
+    ],
+    correctAnswer: 'unverified',
+    feedback: 'The claim comes from a low-reliability source and lacks verification from reputable scientific journals.',
+    verificationSteps: [
+      'Check source reputation',
+      'Look for independent verification',
+      'Consult expert analysis'
+    ],
+    difficulty: 'beginner',
+    points: 10
+  },
+  {
+    id: 2,
+    type: 'source_check',
+    scenario: 'A viral tweet shows "military using AI drones that make autonomous kill decisions"',
+    sources: [
+      { name: 'Department of Defense', reliability: 'high', hasCoverage: true, statement: 'Policy prohibits autonomous kill decisions' },
+      { name: 'Reuters', reliability: 'high', hasCoverage: true, statement: 'Confirmed with military sources' },
+      { name: 'Viral Twitter Account', reliability: 'low', hasCoverage: true, statement: 'Anonymous "insider" claims' },
+      { name: 'UN Weapons Report', reliability: 'high', hasCoverage: false }
+    ],
+    correctAnswer: 'false',
+    feedback: 'Official sources and reputable journalism contradict the viral claim. Autonomous kill decisions remain prohibited by policy.',
+    verificationSteps: [
+      'Check official statements',
+      'Consult reputable journalism',
+      'Verify with policy documents'
+    ],
+    difficulty: 'intermediate',
+    points: 15
+  }
+];
+
+// Badge definitions
+export const badges = {
+  'first_drill': {
+    name: 'Getting Started',
+    description: 'Complete your first detection drill',
+    emoji: '🎯',
+    criteria: { drillsCompleted: 1 }
+  },
+  'weekly_warrior': {
+    name: 'Weekly Warrior',
+    description: 'Complete drills for 7 consecutive days',
+    emoji: '🔥',
+    criteria: { streak: 7 }
+  },
+  'sharp_eye': {
+    name: 'Sharp Eye',
+    description: 'Achieve 80% accuracy on 10+ drills',
+    emoji: '🔍',
+    criteria: { accuracy: 0.8, minDrills: 10 }
+  },
+  'deepfake_detector': {
+    name: 'Deepfake Detective',
+    description: 'Correctly identify 20 deepfake examples',
+    emoji: '🕵️',
+    criteria: { deepfakesIdentified: 20 }
+  },
+  'critical_thinker': {
+    name: 'Critical Thinker',
+    description: 'Complete all fallacy detection drills',
+    emoji: '🧠',
+    criteria: { fallaciesCompleted: 'all' }
+  }
+};
